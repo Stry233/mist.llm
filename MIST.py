@@ -29,7 +29,8 @@ class MISTTrainer:
             self.trainers.append(trainer)
 
         # Train each submodel
-        for trainer in self.trainers:
+        for i, trainer in enumerate(self.trainers):
+            print(f"Training submodel {i + 1}/{self.num_submodels}")
             trainer.train()
 
         # Apply cross-difference loss across submodels
