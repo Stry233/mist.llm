@@ -1,3 +1,4 @@
+from sklearn.metrics import accuracy_score, f1_score
 from transformers import Trainer
 
 from data.partitioner import partition_data
@@ -13,15 +14,16 @@ class MISTTrainer:
         self.cross_diff_lambda = cross_diff_lambda
         self.submodels = initialize_submodels(model, num_submodels)
         self.partitions = partition_data(dataset, num_submodels, split_name=split_name)
+        self.trainers = []
 
-    def train(self, training_args):
+    def train(self, training_args, eval_dataset=None):
         # Initialize trainers for each submodel
-        self.trainers = []  # Define trainers as a class attribute
         for i, submodel in enumerate(self.submodels):
             trainer = Trainer(
                 model=submodel,
                 args=training_args,
                 train_dataset=self.partitions[i],
+                eval_dataset=eval_dataset,
                 compute_metrics=self.compute_metrics
             )
             self.trainers.append(trainer)
@@ -44,6 +46,13 @@ class MISTTrainer:
         return loss * self.cross_diff_lambda
 
     def compute_metrics(self, pred):
-        # Custom metric computations (optional)
-        # Implement ROC-AUC, PLR, or other relevant MI metrics here if desired~
-        pass
+        # Extract predictions and labels
+        predictions = pred.predictions.argmax(axis=-1)
+        labels = pred.label_ids
+
+        # Calculate accuracy and F1 score
+        accuracy = accuracy_score(labels, predictions)
+        f1 = f1_score(labels, predictions)
+
+        # Return metrics as a dictionary
+        return {"accuracy": accuracy, "f1": f1}
