@@ -22,9 +22,7 @@ tokenized_dataset.set_format(type="torch", columns=["input_ids", "attention_mask
 train_dataset = tokenized_dataset["train"]
 eval_dataset = tokenized_dataset["validation"]
 
-# Define training arguments
-training_args = TrainingArguments(output_dir="./results", evaluation_strategy="epoch", num_train_epochs=3)
-
 # Initialize and run MIST
+training_args = TrainingArguments(output_dir="./results", eval_strategy="epoch", num_train_epochs=3)
 mist_trainer = MISTTrainer(model, tokenized_dataset, num_submodels=4, split_name="train")
 mist_trainer.train(training_args, eval_dataset=eval_dataset)
