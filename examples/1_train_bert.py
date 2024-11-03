@@ -1,28 +1,51 @@
+import torch
+from transformers import BertTokenizer, BertForSequenceClassification
 from datasets import load_dataset
-from transformers import AutoModelForSequenceClassification, AutoTokenizer, TrainingArguments
+from transformers import TrainingArguments
 
 from MIST import MISTTrainer
 
-# Example usage with Hugging Face pipeline
-model_name = "bert-base-uncased"
-model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=2)
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-dataset = load_dataset("glue", "mrpc")
+# Load dataset and tokenizer
+dataset = load_dataset("glue", "mrpc")  # Replace with your dataset
+tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
+
+# Preprocess function to align with BERT's expected input
+def preprocess_function(examples):
+    return tokenizer(examples["sentence1"], examples["sentence2"], padding="max_length", truncation=True)
 
 # Tokenize the dataset
-def preprocess_function(examples):
-    return tokenizer(examples['sentence1'], examples['sentence2'], truncation=True, padding="max_length", max_length=128)
+encoded_dataset = dataset.map(preprocess_function, batched=True)
 
-# Apply tokenization to the dataset
-tokenized_dataset = dataset.map(preprocess_function, batched=True)
-tokenized_dataset = tokenized_dataset.rename_column("label", "labels")  # Rename to 'labels' for Trainer
-tokenized_dataset.set_format(type="torch", columns=["input_ids", "attention_mask", "labels"])
+# Ensure "label" column is renamed to "labels" in encoded dataset
+encoded_dataset = encoded_dataset.rename_column("label", "labels")
 
-# Split into train and eval sets
-train_dataset = tokenized_dataset["train"]
-eval_dataset = tokenized_dataset["validation"]
+# Set format for PyTorch
+encoded_dataset.set_format(type="torch", columns=["input_ids", "attention_mask", "labels"])
 
-# Initialize and run MIST
-training_args = TrainingArguments(output_dir="./results", eval_strategy="epoch", num_train_epochs=3)
-mist_trainer = MISTTrainer(model, tokenized_dataset, num_submodels=4, split_name="train")
-mist_trainer.train(training_args, eval_dataset=eval_dataset)
+# Load model for sequence classification
+model = BertForSequenceClassification.from_pretrained("bert-base-uncased")
+
+# Training arguments (adjust as needed)
+training_args = TrainingArguments(
+    output_dir="./results",
+    evaluation_strategy="epoch",
+    per_device_train_batch_size=8,
+    per_device_eval_batch_size=8,
+    num_train_epochs=3,
+    logging_dir='./logs',
+)
+
+# Initialize MISTTrainer with the model, dataset, and relevant parameters
+mist_trainer = MISTTrainer(
+    model=model,
+    dataset=encoded_dataset["train"],
+    num_local_models=2,
+    T1=3,
+    T2=3,
+    cross_diff_weight=0.5,
+    epochs=2,
+    args=training_args
+)
+
+# Train the model
+trained_model = mist_trainer.train()
