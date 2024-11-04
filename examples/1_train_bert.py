@@ -1,9 +1,9 @@
-import torch
-from transformers import BertTokenizer, BertForSequenceClassification
 from datasets import load_dataset
+from transformers import BertTokenizer, BertForSequenceClassification
 from transformers import TrainingArguments
 
-from MIST import MISTTrainer
+from core.mist_trainer import MISTTrainer
+
 
 # Load dataset and tokenizer
 dataset = load_dataset("glue", "mrpc")  # Replace with your dataset
@@ -22,10 +22,10 @@ encoded_dataset = encoded_dataset.rename_column("label", "labels")
 # Set format for PyTorch
 encoded_dataset.set_format(type="torch", columns=["input_ids", "attention_mask", "labels"])
 
-# Load model for sequence classification
+# Load optim for sequence classification
 model = BertForSequenceClassification.from_pretrained("bert-base-uncased")
 
-# Training arguments (adjust as needed)
+# Set up training arguments
 training_args = TrainingArguments(
     output_dir="./results",
     evaluation_strategy="epoch",
@@ -35,17 +35,19 @@ training_args = TrainingArguments(
     logging_dir='./logs',
 )
 
-# Initialize MISTTrainer with the model, dataset, and relevant parameters
+# Initialize MISTTrainer
 mist_trainer = MISTTrainer(
     model=model,
+    args=training_args,
     dataset=encoded_dataset["train"],
-    num_local_models=2,
-    T1=3,
-    T2=3,
-    cross_diff_weight=0.5,
-    epochs=2,
-    args=training_args
+    eval_dataset=encoded_dataset["validation"],
+    num_local_models=3,
+    T1=5,
+    T2=2,
+    cross_diff_weight=0.1,
+    repartition=True
 )
 
-# Train the model
-trained_model = mist_trainer.train()
+# Start training
+mist_trainer.train()
+
