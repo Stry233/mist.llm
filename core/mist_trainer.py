@@ -10,9 +10,9 @@ logger = logging.getLogger(__name__)
 
 
 class MISTTrainer(Trainer):
-    def __init__(self, model, dataset, eval_dataset, num_local_models, T1, T2, cross_diff_weight, repartition=True, **kwargs):
+    def __init__(self, model, train_dataset, eval_dataset, num_local_models, T1, T2, cross_diff_weight, repartition=True, **kwargs):
         super().__init__(model=model, train_dataset=MockDataset(), eval_dataset=eval_dataset, **kwargs)
-        self.dataset = dataset
+        self.dataset = train_dataset
         self.num_local_models = num_local_models
         self.local_models = [model.to(self.args.device) for _ in range(num_local_models)]
         self.optimizers = [torch.optim.Adam(local_model.parameters(), lr=self.args.learning_rate) for local_model in
@@ -25,7 +25,7 @@ class MISTTrainer(Trainer):
             T2=T2,
             cross_diff_weight=cross_diff_weight,
             repartition=repartition,
-            dataset=dataset,
+            dataset=train_dataset,
             model=model,
             local_models=self.local_models,
             optimizers=self.optimizers
