@@ -1,8 +1,8 @@
 from datasets import load_dataset
-from transformers import BertTokenizer, BertForSequenceClassification
+from transformers import BertTokenizer, BertForSequenceClassification, Trainer
 from transformers import TrainingArguments
 
-from core.mist_trainer import MISTTrainer
+from mist.core.mist_trainer import MISTTrainer
 
 
 # Load dataset and tokenizer
@@ -29,17 +29,17 @@ model = BertForSequenceClassification.from_pretrained("bert-base-uncased")
 training_args = TrainingArguments(
     output_dir="./results",
     evaluation_strategy="epoch",
-    per_device_train_batch_size=8,
+    per_device_train_batch_size=32,
     per_device_eval_batch_size=8,
     num_train_epochs=3,
     logging_dir='./logs',
 )
 
 # Initialize MISTTrainer
-mist_trainer = MISTTrainer(
+trainer = MISTTrainer(
     model=model,
     args=training_args,
-    dataset=encoded_dataset["train"],
+    train_dataset=encoded_dataset["train"],
     eval_dataset=encoded_dataset["validation"],
     num_local_models=3,
     T1=5,
@@ -48,6 +48,14 @@ mist_trainer = MISTTrainer(
     repartition=True
 )
 
+# OR normal trainer as an example
+# trainer = Trainer(
+#     model=model,
+#     args=training_args,
+#     train_dataset=encoded_dataset["train"],
+#     eval_dataset=encoded_dataset["validation"],
+# )
+
 # Start training
-mist_trainer.train()
+trainer.train()
 

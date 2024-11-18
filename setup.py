@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="mist.llm",
+    name="mist",
     version="0.1.0",
     author="Yuetian",
     author_email="yuetian.classic@outlook.com",
