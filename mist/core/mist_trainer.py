@@ -28,7 +28,9 @@ class MISTTrainer(Trainer):
             dataset=train_dataset,
             model=model,
             local_models=self.local_models,
-            optimizers=self.optimizers
+            eval_dataset=eval_dataset,
+            optimizers=self.optimizers,
+            **kwargs
         )
 
         # Add MISTCallback to the list of callbacks

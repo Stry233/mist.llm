@@ -1,46 +1,49 @@
 import torch
 import logging
 import copy
+from transformers import Trainer
 
 
 logger = logging.getLogger(__name__)
 
-def local_training(model, optimizer, dataloader, T, device):
+def local_training(model, dataset, T, training_args, tokenizer=None, eval_dataset=None, data_collator=None):
     """
-    Conducts local training on a single model with a specified number of updates.
+    Conducts local training on a single model using Hugging Face Trainer with a specified number of epochs.
 
     Args:
         model (torch.nn.Module): Model to be trained locally.
-        optimizer (torch.optim.Optimizer): Optimizer for the model.
-        dataloader (torch.utils.data.DataLoader): DataLoader providing local training data.
-        T (int): Number of gradient update steps to perform.
-        device (str): Device identifier for model and data (e.g., 'cuda' or 'cpu').
+        dataset (datasets.Dataset or torch.utils.data.Dataset): Dataset for training.
+        T (int): Number of epochs to train.
+        training_args (transformers.TrainingArguments): Training arguments for Hugging Face Trainer.
+        tokenizer (transformers.PreTrainedTokenizer, optional): Tokenizer used for text inputs.
+        eval_dataset (datasets.Dataset or torch.utils.data.Dataset, optional): Dataset for evaluation.
+        data_collator (callable, optional): Function to collate data into batches.
 
     Returns:
         dict: State dictionary of the locally trained model.
 
     Behavior:
-        Iteratively updates the model parameters `T` times using the provided data.
-        Each batch is loaded onto `device` before training.
-
-    Requirements:
-        - `model` should have a `.train()` method.
-        - `optimizer` must support `.step()` and `.zero_grad()` methods.
-        - `dataloader` must yield dictionaries compatible with the model’s forward method.
+        Trains the model using Hugging Face Trainer for T epochs using the provided data and configuration.
     """
-    model.train()
-    model.to(device)
+    # Update the number of epochs in training arguments
+    training_args.num_train_epochs = T
 
-    for step in range(T):
-        logger.info("Local training step %d/%d", step + 1, T)
-        for batch in dataloader:
-            batch = {k: v.to(device) for k, v in batch.items()}
-            outputs = model(**batch)
-            loss = outputs.loss
-            loss.backward()
-            optimizer.step()
-            optimizer.zero_grad()
+    trainer = Trainer(
+        model=model,
+        args=training_args,
+        tokenizer=tokenizer,
+        train_dataset=dataset,
+        eval_dataset=eval_dataset,
+        data_collator=data_collator
+    )
+
+    # Start training
+    trainer.train()
+
+    # Return the model's state dict
     return model.state_dict()
+
+
 
 
 def cross_difference_loss(model, optimizer, dataloader, reference_models, T, cross_diff_weight, device):

@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="mist",
-    version="0.1.0",
+    version="0.1.1",
     author="Yuetian",
     author_email="yuetian.classic@outlook.com",
     description="A plug-and-play module for deploying MIST to LLM training",
